@@ -1,0 +1,13 @@
+# Konfigurasi build dan deploy untuk Netlify
+[build]
+  # Perintah untuk membuild project
+  command = "npm run build"
+  # Folder output hasil build (Vite defaultnya 'dist')
+  publish = "dist"
+
+# Aturan Redirect untuk Single Page Application (SPA)
+# Ini PENTING agar routing React Router berfungsi saat halaman di-refresh
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

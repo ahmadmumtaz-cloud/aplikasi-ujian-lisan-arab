@@ -1,0 +1,5 @@
+{
+  "name": "Aplikasi Ujian Lisan Bahasa Arab PM Al Ghozali",
+  "description": "Aplikasi manajemen ujian lisan bahasa Arab dengan fitur penilaian, manajemen siswa, dan ekspor laporan sesuai template.",
+  "requestFramePermissions": []
+}
