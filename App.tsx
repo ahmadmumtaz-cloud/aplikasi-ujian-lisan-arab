@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { StudentList } from './pages/StudentList';
@@ -10,12 +8,10 @@ import { QuestionBank } from './pages/QuestionBank';
 import { BackupRestore } from './pages/BackupRestore';
 import { INITIAL_STUDENTS } from './constants';
 import { Student } from './types';
-import { GraduationCap, ArrowRight, Calendar, Menu } from 'lucide-react';
+import { GraduationCap, Calendar, Menu, Bell } from 'lucide-react';
 
 function App() {
   // Central State Management
-  // Load from localStorage to persist data across refreshes
-  // Key updated to force refresh with new data containing scores
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('alghozali_students_5c_updated');
     if (saved) {
@@ -41,6 +37,18 @@ function App() {
   const [tempName, setTempName] = useState('');
   const [tempDate, setTempDate] = useState('');
 
+  // Router State
+  const [currentPath, setCurrentPath] = useState(window.location.hash.replace(/^#/, '') || '/');
+
+  // Listen to hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      setCurrentPath(window.location.hash.replace(/^#/, '') || '/');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   // Check local storage for auth details on load
   useEffect(() => {
     const savedName = localStorage.getItem('examinerName');
@@ -51,12 +59,11 @@ function App() {
         if (savedDate) setExamDate(savedDate);
         setIsLoggedIn(true);
     } else {
-        // Set default date to today for the login form
         setTempDate(new Date().toISOString().split('T')[0]);
     }
   }, []);
 
-  // Persist students data whenever it changes
+  // Persist students data
   useEffect(() => {
     localStorage.setItem('alghozali_students_5c_updated', JSON.stringify(students));
   }, [students]);
@@ -78,112 +85,137 @@ function App() {
     setExaminerName('');
     setTempName('');
     localStorage.removeItem('examinerName');
-    // We keep the date in localStorage as convenience
+  };
+
+  // Helper for Header Title
+  const TopHeader = () => {
+    const getTitle = () => {
+        switch(currentPath) {
+            case '/': return 'Dashboard Ikhtisar';
+            case '/students': return 'Manajemen Santri';
+            case '/questions': return 'Bank Soal Digital';
+            case '/grading': return 'Penilaian Ujian Lisan';
+            case '/export': return 'Pusat Laporan';
+            case '/settings': return 'Pengaturan & Backup';
+            default: return 'Sistem Ujian';
+        }
+    };
+
+    return (
+        <header className="glass-header px-8 py-4 flex items-center justify-between no-print">
+            <div className="flex items-center gap-4">
+                <button 
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="md:hidden p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">{getTitle()}</h2>
+                    <p className="text-xs text-gray-500 font-medium hidden md:block">
+                        Tahun Ajaran 2024/2025 • Semester Genap
+                    </p>
+                </div>
+            </div>
+            <div className="flex items-center gap-6">
+                <div className="hidden md:flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm font-semibold text-emerald-800">{new Date(examDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'})}</span>
+                </div>
+                <div className="relative cursor-pointer hover:bg-gray-100 p-2 rounded-full transition-colors">
+                    <Bell className="w-5 h-5 text-gray-500" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                </div>
+            </div>
+        </header>
+    );
+  };
+
+  const renderContent = () => {
+    switch(currentPath) {
+        case '/': return <Dashboard students={students} />;
+        case '/students': return <StudentList students={students} setStudents={setStudents} currentExaminer={examinerName} />;
+        case '/questions': return <QuestionBank />;
+        case '/grading': return <Grading students={students} setStudents={setStudents} examinerName={examinerName} />;
+        case '/export': return <ExportView students={students} setStudents={setStudents} currentExaminer={examinerName} examDate={examDate} />;
+        case '/settings': return <BackupRestore students={students} setStudents={setStudents} />;
+        default: return <Dashboard students={students} />;
+    }
   };
 
   if (!isLoggedIn) {
       return (
-          <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-              <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden">
-                  <div className="bg-emerald-600 p-8 text-center">
-                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
-                          <GraduationCap className="w-10 h-10 text-white" />
+          <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+              {/* Login Background */}
+              <div className="absolute inset-0 overflow-hidden">
+                  <div className="absolute -top-[20%] -left-[10%] w-[700px] h-[700px] bg-emerald-500/20 rounded-full blur-[120px] mix-blend-screen"></div>
+                  <div className="absolute bottom-[0%] right-[0%] w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[100px] mix-blend-screen"></div>
+              </div>
+
+              <div className="max-w-md w-full bg-white/5 backdrop-blur-2xl rounded-3xl shadow-2xl overflow-hidden relative z-10 border border-white/10 ring-1 ring-white/10">
+                  <div className="p-10 text-center relative">
+                      <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-emerald-500/30 rotate-3">
+                          <GraduationCap className="w-12 h-12 text-white" />
                       </div>
-                      <h1 className="text-2xl font-bold text-white mb-2">Sistem Ujian Lisan</h1>
-                      <p className="text-emerald-100">Al-Ghozali Modern Islamic Boarding School</p>
+                      <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Sistem Ujian Lisan</h1>
+                      <p className="text-emerald-100/60 font-medium">PM Al-Ghozali Modern School</p>
                   </div>
-                  <div className="p-8">
-                      <form onSubmit={handleLogin} className="space-y-6">
+                  <div className="p-8 bg-white rounded-t-3xl shadow-inner">
+                      <form onSubmit={handleLogin} className="space-y-5">
                           <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Masukkan Nama Penguji
-                              </label>
+                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nama Penguji</label>
                               <input 
                                   type="text" 
                                   required
-                                  placeholder="Contoh: Ust. Abdullah"
-                                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                                  placeholder="Masukkan nama lengkap..."
+                                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none bg-gray-50 font-medium text-gray-800"
                                   value={tempName}
                                   onChange={(e) => setTempName(e.target.value)}
                               />
                           </div>
                           <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Tanggal Ujian
-                              </label>
-                              <div className="relative">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Calendar className="h-5 w-5 text-gray-400" />
-                                  </div>
-                                  <input 
-                                      type="date" 
-                                      required
-                                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
-                                      value={tempDate}
-                                      onChange={(e) => setTempDate(e.target.value)}
-                                  />
-                              </div>
+                              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Tanggal Pelaksanaan</label>
+                              <input 
+                                  type="date" 
+                                  required
+                                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none bg-gray-50 font-medium text-gray-800"
+                                  value={tempDate}
+                                  onChange={(e) => setTempDate(e.target.value)}
+                              />
                           </div>
                           <button 
                               type="submit" 
-                              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-bold hover:bg-emerald-700 transition flex items-center justify-center gap-2 group"
+                              className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-0.5 transition-all duration-200"
                           >
-                              Masuk Aplikasi <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                              Masuk Aplikasi
                           </button>
                       </form>
-                      <p className="mt-6 text-center text-xs text-gray-400">
-                          &copy; 2025 IT Division - PM Al Ghozali
-                      </p>
                   </div>
               </div>
+              <p className="mt-8 text-white/20 text-xs font-medium">Designed for Excellence © 2025</p>
           </div>
       );
   }
 
   return (
-    <HashRouter>
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex min-h-screen bg-mesh bg-grid-pattern text-slate-800 font-sans selection:bg-emerald-200 selection:text-emerald-900">
         
         <Sidebar 
             examinerName={examinerName} 
             onLogout={handleLogout}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
+            currentPath={currentPath}
         />
         
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 md:ml-64 transition-all duration-300">
-            
-            {/* Mobile Header */}
-            <div className="md:hidden bg-white border-b border-gray-200 p-4 sticky top-0 z-30 flex items-center gap-3 shadow-sm">
-                <button 
-                    onClick={() => setIsSidebarOpen(true)}
-                    className="p-2 -ml-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                    <Menu className="w-6 h-6" />
-                </button>
-                <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-emerald-600 rounded-md flex items-center justify-center">
-                        <GraduationCap className="w-4 h-4 text-white" />
-                    </div>
-                    <span className="font-bold text-gray-800">Al-Ghozali</span>
-                </div>
-            </div>
-
-            <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-                <Routes>
-                    <Route path="/" element={<Dashboard students={students} />} />
-                    <Route path="/students" element={<StudentList students={students} setStudents={setStudents} currentExaminer={examinerName} />} />
-                    <Route path="/questions" element={<QuestionBank />} />
-                    <Route path="/grading" element={<Grading students={students} setStudents={setStudents} examinerName={examinerName} />} />
-                    <Route path="/export" element={<ExportView students={students} setStudents={setStudents} currentExaminer={examinerName} examDate={examDate} />} />
-                    <Route path="/settings" element={<BackupRestore students={students} setStudents={setStudents} />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+        {/* Main Content Wrapper */}
+        <div className="flex-1 flex flex-col min-w-0 md:ml-[280px] transition-all duration-300 relative">
+            <TopHeader />
+            <main className="flex-1 p-4 md:p-8 overflow-y-auto max-w-[1600px] mx-auto w-full custom-scrollbar">
+                {renderContent()}
             </main>
         </div>
       </div>
-    </HashRouter>
   );
 }
 
